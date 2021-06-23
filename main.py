@@ -1,8 +1,104 @@
 import pytesseract
 import cv2
 import numpy as np
-import datefinder
+from datetime import datetime
+from docx import Document
+import icalendar
+import calendar, events
 
+
+# def createEvent(img, assignment_list, dates_list):
+#     # today's date
+#     today = datetime.today()
+#     # img to table format to dissect easier
+#     document = Document(img)
+#     # get first item in table row
+#     table = document.tables[0]
+#     # Creating a list and a dictionary
+#     data = []
+#     keys = {}
+#     col_titles = ('Date', 'Topic', 'Notes')
+#     print("1")
+#     # Looping through the each line in the Word table:
+#     for i, row in enumerate(table.rows):
+#         # Getting text from the cells
+#         text = (cell.text for cell in row.cells)
+#
+#         # Getting they column names:
+#         if i == 0:
+#             keys = tuple(col_titles)
+#             continue
+#
+#         # Creating a dictionary
+#         row_data = dict(zip(keys, text))
+#         # create start and end time for event
+#         row_data[u'dtstart'] = datetime(today.year, dates_list[i])
+#         row_data[u'dtend'] = datetime(today.year, dates_list[i])
+#         # append event to our list
+#         data.append(row_data)
+#         print("2")
+#     print("3")
+#     cal = calendar()
+#
+#     for row in data:
+#         event = events()
+#
+#         event.add('summary', row['Title'])
+#         event.add('dtstart', row['dtstart'])
+#         event.add('dtend', row['dtend'])
+#         event.add('description', row['Title'])
+#         event.add('location', row['Room'])
+#         cal.add_component(event)
+#
+#     f = open('course_schedule.ics', 'wb')
+#     f.write(cal.to_ical())
+#     f.close()
+
+
+def imgToTable(contours, img):
+    # find longest date and assignment string, allows us to build our table without
+    # making a table cell too big or small
+    max_assign_size = 10000
+    max_date_size = 10000
+
+
+    # cycle through all of our contours to find longest string in each column
+    for i in range(0, len(contours)):
+        # get dimension for the rectangular box around our contour (contour: date or assigngment)
+        x, y, w, h = cv2.boundingRect(contours[i])
+
+        # if even, assignment string
+        if i%2 == 0:
+            if x+w < max_assign_size:
+                max_assign_tup = (x,y,w,h)
+        # else, date string
+        else:
+            if x+w < max_date_size:
+                max_date_index = (x,y,w,h)
+        # save the first and last textbox coordinates so we know where the course schedule starts and ends
+        # reads image bottom-up, right-to-left
+        if i == 0:
+            # bottom right
+            last_textbox = (x,y,w,h)
+        # top left
+        elif i == len(contours)-1:
+            first_textbox = (x,y,w,h)
+    # draw lines in our image to create a table format
+    start_x_coord = first_textbox[0]
+    start_y_coord = first_textbox[3]
+    start_pt = (start_x_coord, start_y_coord)
+
+    end_x_coord = last_textbox[0] + last_textbox[2]
+    end_y_coord = start_y_coord
+    end_pt = (end_x_coord, end_y_coord)
+
+    thickness = 3
+    img = cv2.line(img, start_pt, end_pt, (0,0,0), thickness)
+
+    #test: show image of the desired result
+    cv2.imshow('Box Image', img)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
 
 
 def getText(contour,mask1,img):
@@ -23,6 +119,9 @@ def getText(contour,mask1,img):
 
 
 def main():
+    # array to hold our assignment dates and names
+    dates_list = []
+    assignments_list = []
     # get path to file that can read text in images
     pytesseract.pytesseract.tesseract_cmd = r'/usr/local/bin/tesseract'
     # get image
@@ -42,10 +141,20 @@ def main():
     # cycle through our contours (dates and assignments) to read text in image
     for i in range(0,len(contours)):
         result = getText(contours[i], mask1, img)
+        # temp solution as we test:
+        # if even index, result is assignment name
+        if(i % 2 == 0 ):
+            assignments_list.append(result)
+        # if odd, result is date
+        else:
+            dates_list.append(result)
 
-    #test: show image of the desired result
-    cv2.imshow('Box Image', result)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
-    
+    imgToTable(contours,img)
+    #createEvent(img, assignments_list, dates_list)
+
+    # #test: show image of the desired result
+    # cv2.imshow('Box Image', result)
+    # cv2.waitKey(0)
+    # cv2.destroyAllWindows()
+
 main()

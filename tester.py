@@ -1,20 +1,22 @@
-import datefinder
 
-input_string = "Chapter 9,21"
-# a generator will be returned by the datefinder module. I'm typecasting it to a list. Please read the note of caution provided at the bottom.
-matches = list(datefinder.find_dates(input_string))
+# playing around datefinder to see how it works
+# import datefinder
+#
+# input_string = "3/29/21"
+# # a generator will be returned by the datefinder module. I'm typecasting it to a list. Please read the note of caution provided at the bottom.
+# matches = list(datefinder.find_dates(input_string))
+#
+# if len(matches) > 0:
+#     # date returned will be a datetime.datetime object. here we are only using the first match.
+#     date = matches[0]
+#     print(date)
+# else:
+#     print('No dates found')
 
-if len(matches) > 0:
-    # date returned will be a datetime.datetime object. here we are only using the first match.
-    date = matches[0]
-    print(date)
-else:
-    print('No dates found')
 
+# --------------------------------------------------
 
-
-
-
+# playing around with creating a table from an image in order to dissect it easier
 
 
 
