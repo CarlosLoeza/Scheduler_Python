@@ -1,12 +1,7 @@
 import pytesseract
 import cv2
 import numpy as np
-from datetime import datetime
-from docx import Document
-import icalendar
-import calendar, events
-import numpy as np
-from imutils import contours
+
 
 
 # def createEvent(img, assignment_list, dates_list):
@@ -86,6 +81,7 @@ def countRowsAndColumns(contours, img):
             held_val = row[i]
         else:
             temp = row[i]
+            # if difference is greater than 5, we have another column
             if abs(held_val-temp) > 5:
                 col_count+=1
                 held_val = row[i]
@@ -104,7 +100,7 @@ def countRowsAndColumns(contours, img):
     print("Rows: " + str(row_count))
     print("Columns: " + str(col_count))
 
-
+    return (row_count,col_count)
 
 def imgToTable(contours, img):
     # find longest date and assignment string, allows us to build our table without
@@ -121,19 +117,19 @@ def imgToTable(contours, img):
         # if even, assignment string
         if i%2 == 0:
             if x+w < max_assign_size:
-                max_assign_tup = (x,y,w,h)
+                max_assign_tup = (x, y, w, h)
         # else, date string
         else:
             if x+w < max_date_size:
-                max_date_tup = (x,y,w,h)
+                max_date_tup = (x, y, w, h)
         # save the first and last textbox coordinates so we know where the course schedule starts and ends
         # reads image bottom-up, right-to-left
         if i == 0:
             # bottom right textbox
-            last_textbox = (x,y,w,h)
+            last_textbox = (x, y, w, h)
         # top left textbox
         elif i == len(contours)-1:
-                first_textbox = (x,y,w,h)
+            first_textbox = (x, y, w, h)
 
     for i in range(0, len(contours)):
         # create a bounding rectangle around our text in image
@@ -258,7 +254,7 @@ def main():
             dates_list.append(result)
 
     img = imgToTable(contours,img)
-    countRowsAndColumns(contours,img)
+    row_col = countRowsAndColumns(contours,img)
 
 
 
