@@ -59,28 +59,51 @@ from imutils import contours
 
 
 def countRowsAndColumns(contours, img):
+    # keep track of the number of rows and columns
     row_count = 0
     col_count = 0
+    # get (x,y) points to figure out how many rows and columns we have
+    # row holds the x values of our contours
+    # col holds the y values of our contours
     row = []
     col = []
+
     for i in range(0, len(contours)):
         # get dimension for the rectangular box around our contour (contour: date or assigngment)
         x, y, w, h = cv2.boundingRect(contours[i])
-        print("x: " + str(x))
-        print("y: " + str(y))
-        print()
-
         row.append(x)
         col.append(y)
-
+   # sort so we can check if they are the same or different based on the difference.
     row.sort()
     col.sort()
+    temp =0
+    held_val =0
+    # check how many items in a row (ex: 2 different x values in row means we have 2 columns
+    for i in range (0, len(row)):
+        if i == 0:
+            # increment col_count since we are counting the number of columns in row
+            col_count+=1
+            held_val = row[i]
+        else:
+            temp = row[i]
+            if abs(held_val-temp) > 5:
+                col_count+=1
+                held_val = row[i]
 
+    # check how many items in a column (ex: 12 different y values in col means we have 12 rows
+    for i in range (0, len(col)):
+        if i == 0:
+            row_count+=1
+            held_val = col[i]
+        else:
+            temp = col[i]
+            if abs(held_val-temp) > 5:
+                row_count+=1
+                held_val = col[i]
 
-    print("row length: " + str(len(row)))
-    print("col length: " + str(len(col)))
-    print(row)
-    print(col)
+    print("Rows: " + str(row_count))
+    print("Columns: " + str(col_count))
+
 
 
 def imgToTable(contours, img):
