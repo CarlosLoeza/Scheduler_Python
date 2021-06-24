@@ -74,26 +74,101 @@ def imgToTable(contours, img):
         # else, date string
         else:
             if x+w < max_date_size:
-                max_date_index = (x,y,w,h)
+                max_date_tup = (x,y,w,h)
         # save the first and last textbox coordinates so we know where the course schedule starts and ends
         # reads image bottom-up, right-to-left
         if i == 0:
-            # bottom right
+            # bottom right textbox
             last_textbox = (x,y,w,h)
-        # top left
+        # top left textbox
         elif i == len(contours)-1:
-            first_textbox = (x,y,w,h)
-    # draw lines in our image to create a table format
-    start_x_coord = first_textbox[0]
-    start_y_coord = first_textbox[3]
-    start_pt = (start_x_coord, start_y_coord)
+                first_textbox = (x,y,w,h)
 
-    end_x_coord = last_textbox[0] + last_textbox[2]
-    end_y_coord = start_y_coord
-    end_pt = (end_x_coord, end_y_coord)
+    for i in range(0, len(contours)):
+        # create a bounding rectangle around our text in image
+        # text can be a date or assignment name
+        x,y,w,h = cv2.boundingRect(contours[i])
 
-    thickness = 3
-    img = cv2.line(img, start_pt, end_pt, (0,0,0), thickness)
+        # if bottom left textbox, we will draw a left and right vertical line to create a column.
+        # Also draw a horizontal line under our textbox to show where text ends
+        if i ==0:
+            # left vertivcal line ( ex: | column1 | column2 | column3 | ... |)
+            start_x_coord = last_textbox[0]
+            start_y_coord = last_textbox[1] + last_textbox[3]
+            start_pt = (start_x_coord, start_y_coord)
+            end_x_coord = x
+            end_y_coord = first_textbox[1]
+            end_pt = (end_x_coord, end_y_coord)
+            # add vertical line to image
+            thickness = 3
+            img = cv2.line(img, start_pt, end_pt, (0, 0, 0), thickness)
+            # right vertical line
+            start_x_coord = last_textbox[0] + last_textbox[2]
+            start_y_coord = last_textbox[1] + last_textbox[3]
+            start_pt = (start_x_coord, start_y_coord)
+            end_x_coord = start_x_coord
+            end_y_coord = first_textbox[1]
+            end_pt = (end_x_coord, end_y_coord)
+            # add vertical line to image
+            thickness = 3
+            img = cv2.line(img, start_pt, end_pt, (0, 0, 0), thickness)
+            # bottom horizontal("floor" line)
+            start_x_coord = last_textbox[0] + last_textbox[2]
+            start_y_coord = last_textbox[1] + last_textbox[3]
+            start_pt = (start_x_coord, start_y_coord)
+            end_x_coord = first_textbox[0]
+            end_y_coord = start_y_coord
+            end_pt = (end_x_coord, end_y_coord)
+            thickness = 3
+            img = cv2.line(img, start_pt, end_pt, (0, 0, 0), thickness)
+        elif i == len(contours)-1:
+            # vertivcal line
+            start_x_coord = first_textbox[0]
+            start_y_coord = first_textbox[1]
+            start_pt = (start_x_coord, start_y_coord)
+            end_x_coord = start_x_coord
+            end_y_coord = last_textbox[1] + last_textbox[3]
+            end_pt = (end_x_coord, end_y_coord)
+            # add vertical line to image
+            thickness = 3
+            img = cv2.line(img, start_pt, end_pt, (0, 0, 0), thickness)
+            # bottom horizontal("floor" line)
+            start_x_coord = last_textbox[0] + last_textbox[2]
+            start_y_coord = last_textbox[1] + last_textbox[3]
+            start_pt = (start_x_coord, start_y_coord)
+            end_x_coord = first_textbox[0]
+            end_y_coord = start_y_coord
+            end_pt = (end_x_coord, end_y_coord)
+            thickness = 3
+            img = cv2.line(img, start_pt, end_pt, (0, 0, 0), thickness)
+
+
+        # draw lines in our image to create a table format
+        # start point for our line
+        start_x_coord = x
+        start_y_coord = y
+        start_pt = (start_x_coord, start_y_coord)
+        # end point for our line
+        end_x_coord = last_textbox[0] + last_textbox[2]
+        end_y_coord = start_y_coord
+        end_pt = (end_x_coord, end_y_coord)
+
+        thickness = 3
+        img = cv2.line(img, start_pt, end_pt, (0, 0, 0), thickness)
+
+        # --------------------------------------------------
+        # # draw lines in our image to create a table format
+        # # start point for our line
+        # start_x_coord = first_textbox[0]
+        # start_y_coord = first_textbox[3]
+        # start_pt = (start_x_coord, start_y_coord)
+        # # end point for our line
+        # end_x_coord = last_textbox[0] + last_textbox[2]
+        # end_y_coord = start_y_coord
+        # end_pt = (end_x_coord, end_y_coord)
+        #
+        # thickness = 3
+        # img = cv2.line(img, start_pt, end_pt, (0,0,0), thickness)
 
     #test: show image of the desired result
     cv2.imshow('Box Image', img)
