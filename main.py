@@ -5,6 +5,8 @@ from datetime import datetime
 from docx import Document
 import icalendar
 import calendar, events
+import numpy as np
+from imutils import contours
 
 
 # def createEvent(img, assignment_list, dates_list):
@@ -53,6 +55,32 @@ import calendar, events
 #     f = open('course_schedule.ics', 'wb')
 #     f.write(cal.to_ical())
 #     f.close()
+
+
+
+def countRowsAndColumns(contours, img):
+    row_count = 0
+    col_count = 0
+    row = []
+    col = []
+    for i in range(0, len(contours)):
+        # get dimension for the rectangular box around our contour (contour: date or assigngment)
+        x, y, w, h = cv2.boundingRect(contours[i])
+        print("x: " + str(x))
+        print("y: " + str(y))
+        print()
+
+        row.append(x)
+        col.append(y)
+
+    row.sort()
+    col.sort()
+
+
+    print("row length: " + str(len(row)))
+    print("col length: " + str(len(col)))
+    print(row)
+    print(col)
 
 
 def imgToTable(contours, img):
@@ -156,25 +184,7 @@ def imgToTable(contours, img):
         thickness = 3
         img = cv2.line(img, start_pt, end_pt, (0, 0, 0), thickness)
 
-        # --------------------------------------------------
-        # # draw lines in our image to create a table format
-        # # start point for our line
-        # start_x_coord = first_textbox[0]
-        # start_y_coord = first_textbox[3]
-        # start_pt = (start_x_coord, start_y_coord)
-        # # end point for our line
-        # end_x_coord = last_textbox[0] + last_textbox[2]
-        # end_y_coord = start_y_coord
-        # end_pt = (end_x_coord, end_y_coord)
-        #
-        # thickness = 3
-        # img = cv2.line(img, start_pt, end_pt, (0,0,0), thickness)
-
-    #test: show image of the desired result
-    cv2.imshow('Box Image', img)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
-
+    return img
 
 def getText(contour,mask1,img):
     # get path to file that can read text in images
@@ -188,7 +198,7 @@ def getText(contour,mask1,img):
     # remove \n from our string
     test = test.replace("\n", "")
     # test: print text in our image
-    print(test)
+    #print(test)
     # return text in the form of string
     return result
 
@@ -224,12 +234,16 @@ def main():
         else:
             dates_list.append(result)
 
-    imgToTable(contours,img)
+    img = imgToTable(contours,img)
+    countRowsAndColumns(contours,img)
+
+
+
     #createEvent(img, assignments_list, dates_list)
 
-    # #test: show image of the desired result
-    # cv2.imshow('Box Image', result)
-    # cv2.waitKey(0)
-    # cv2.destroyAllWindows()
+    #test: show image of the desired result
+    cv2.imshow('Box Image', img)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
 
 main()
