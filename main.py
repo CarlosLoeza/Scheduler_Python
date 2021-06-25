@@ -1,55 +1,8 @@
 import pytesseract
 import cv2
 import numpy as np
+import calendar
 
-
-
-# def createEvent(img, assignment_list, dates_list):
-#     # today's date
-#     today = datetime.today()
-#     # img to table format to dissect easier
-#     document = Document(img)
-#     # get first item in table row
-#     table = document.tables[0]
-#     # Creating a list and a dictionary
-#     data = []
-#     keys = {}
-#     col_titles = ('Date', 'Topic', 'Notes')
-#     print("1")
-#     # Looping through the each line in the Word table:
-#     for i, row in enumerate(table.rows):
-#         # Getting text from the cells
-#         text = (cell.text for cell in row.cells)
-#
-#         # Getting they column names:
-#         if i == 0:
-#             keys = tuple(col_titles)
-#             continue
-#
-#         # Creating a dictionary
-#         row_data = dict(zip(keys, text))
-#         # create start and end time for event
-#         row_data[u'dtstart'] = datetime(today.year, dates_list[i])
-#         row_data[u'dtend'] = datetime(today.year, dates_list[i])
-#         # append event to our list
-#         data.append(row_data)
-#         print("2")
-#     print("3")
-#     cal = calendar()
-#
-#     for row in data:
-#         event = events()
-#
-#         event.add('summary', row['Title'])
-#         event.add('dtstart', row['dtstart'])
-#         event.add('dtend', row['dtend'])
-#         event.add('description', row['Title'])
-#         event.add('location', row['Room'])
-#         cal.add_component(event)
-#
-#     f = open('course_schedule.ics', 'wb')
-#     f.write(cal.to_ical())
-#     f.close()
 
 
 
@@ -62,6 +15,8 @@ def countRowsAndColumns(contours, img):
     # col holds the y values of our contours
     row = []
     col = []
+    new_row = []
+    new_col = []
 
     for i in range(0, len(contours)):
         # get dimension for the rectangular box around our contour (contour: date or assigngment)
@@ -79,137 +34,184 @@ def countRowsAndColumns(contours, img):
             # increment col_count since we are counting the number of columns in row
             col_count+=1
             held_val = row[i]
+            new_row.append(row[i])
         else:
             temp = row[i]
             # if difference is greater than 5, we have another column
-            if abs(held_val-temp) > 5:
+            if abs(held_val-temp) > 10:
                 col_count+=1
                 held_val = row[i]
+                new_row.append(row[i])
 
     # check how many items in a column (ex: 12 different y values in col means we have 12 rows
     for i in range (0, len(col)):
         if i == 0:
             row_count+=1
             held_val = col[i]
+            new_col.append(col[i])
         else:
             temp = col[i]
-            if abs(held_val-temp) > 5:
+            if abs(held_val-temp) > 10:
                 row_count+=1
                 held_val = col[i]
+                new_col.append(col[i])
 
-    print("Rows: " + str(row_count))
-    print("Columns: " + str(col_count))
+    # print("Rows: " + str(row_count))
+    # print("Columns: " + str(col_count))
 
-    return (row_count,col_count)
 
-def imgToTable(contours, img):
+    return (new_row,new_col)
+
+
+
+def imgToTable(contours, img, row_col):
     # find longest date and assignment string, allows us to build our table without
     # making a table cell too big or small
-    max_assign_size = 10000
-    max_date_size = 10000
+    max_assign_size = -1
+    max_date_size = -1
+    col_size = len(row_col[1])
+
+    print(row_col[0])
+    print(row_col[1])
 
 
     # cycle through all of our contours to find longest string in each column
     for i in range(0, len(contours)):
         # get dimension for the rectangular box around our contour (contour: date or assigngment)
         x, y, w, h = cv2.boundingRect(contours[i])
+        # print("x: " + str(x))
+        # print("y: " + str(y))
+        # print()
 
-        # if even, assignment string
-        if i%2 == 0:
-            if x+w < max_assign_size:
-                max_assign_tup = (x, y, w, h)
-        # else, date string
-        else:
-            if x+w < max_date_size:
-                max_date_tup = (x, y, w, h)
         # save the first and last textbox coordinates so we know where the course schedule starts and ends
         # reads image bottom-up, right-to-left
         if i == 0:
             # bottom right textbox
-            last_textbox = (x, y, w, h)
-        # top left textbox
-        elif i == len(contours)-1:
             first_textbox = (x, y, w, h)
+        # top left textbox
+        elif i == len(contours) - 1:
+            last_textbox = (x, y, w, h)
+
+        # if second to last column, assignment string
+        if i%col_size == (col_size-2):
+            if x+w > max_assign_size:
+                max_assign_tup = (x, y, w, h)
+                max_assign_size = x+w
+        # else, date string
+        elif i%col_size == (col_size-1):
+            if x+w < max_date_size:
+                max_date_tup = (x, y, w, h)
+                max_assign_size = x+w
+
 
     for i in range(0, len(contours)):
         # create a bounding rectangle around our text in image
         # text can be a date or assignment name
         x,y,w,h = cv2.boundingRect(contours[i])
 
-        # if bottom left textbox, we will draw a left and right vertical line to create a column.
-        # Also draw a horizontal line under our textbox to show where text ends
+        # if bottom right textbox aka assignment name, we will draw a left and right vertical line to create a column.
+        # Also draw a horizontal line under our textbox to show where text ends ex: |_____|
         if i ==0:
             # left vertivcal line ( ex: | column1 | column2 | column3 | ... |)
-            start_x_coord = last_textbox[0]
-            start_y_coord = last_textbox[1] + last_textbox[3]
-            start_pt = (start_x_coord, start_y_coord)
-            end_x_coord = x
-            end_y_coord = first_textbox[1]
-            end_pt = (end_x_coord, end_y_coord)
-            # add vertical line to image
-            thickness = 3
-            img = cv2.line(img, start_pt, end_pt, (0, 0, 0), thickness)
-            # right vertical line
-            start_x_coord = last_textbox[0] + last_textbox[2]
-            start_y_coord = last_textbox[1] + last_textbox[3]
-            start_pt = (start_x_coord, start_y_coord)
-            end_x_coord = start_x_coord
-            end_y_coord = first_textbox[1]
-            end_pt = (end_x_coord, end_y_coord)
-            # add vertical line to image
-            thickness = 3
-            img = cv2.line(img, start_pt, end_pt, (0, 0, 0), thickness)
-            # bottom horizontal("floor" line)
-            start_x_coord = last_textbox[0] + last_textbox[2]
-            start_y_coord = last_textbox[1] + last_textbox[3]
-            start_pt = (start_x_coord, start_y_coord)
-            end_x_coord = first_textbox[0]
-            end_y_coord = start_y_coord
-            end_pt = (end_x_coord, end_y_coord)
-            thickness = 3
-            img = cv2.line(img, start_pt, end_pt, (0, 0, 0), thickness)
-        elif i == len(contours)-1:
-            # vertivcal line
+            # beginning of textbox
             start_x_coord = first_textbox[0]
-            start_y_coord = first_textbox[1]
+            start_y_coord = first_textbox[1] + max_assign_tup[3]
             start_pt = (start_x_coord, start_y_coord)
-            end_x_coord = start_x_coord
-            end_y_coord = last_textbox[1] + last_textbox[3]
+            # top of page
+            end_x_coord = first_textbox[0]
+            end_y_coord = last_textbox[1]
             end_pt = (end_x_coord, end_y_coord)
             # add vertical line to image
             thickness = 3
             img = cv2.line(img, start_pt, end_pt, (0, 0, 0), thickness)
-            # bottom horizontal("floor" line)
-            start_x_coord = last_textbox[0] + last_textbox[2]
-            start_y_coord = last_textbox[1] + last_textbox[3]
+
+            # right vertical line
+            start_x_coord = first_textbox[0] + (max_assign_tup[0]+  max_assign_tup[2])
+            start_y_coord = first_textbox[1] + max_assign_tup[3]
             start_pt = (start_x_coord, start_y_coord)
-            end_x_coord = first_textbox[0]
+            end_x_coord = start_x_coord
+            end_y_coord = last_textbox[1]
+            end_pt = (end_x_coord, end_y_coord)
+            # add vertical line to image
+            img = cv2.line(img, start_pt, end_pt, (0, 0, 0), thickness)
+
+            # bottom horizontal("floor" line)
+            start_x_coord = last_textbox[0]
+            start_y_coord = first_textbox[1] + max_assign_tup[3]
+            start_pt = (start_x_coord, start_y_coord)
+            end_x_coord = first_textbox[0] + (max_assign_tup[0]+  max_assign_tup[2])
             end_y_coord = start_y_coord
             end_pt = (end_x_coord, end_y_coord)
+            # add bottom horizontal line to image
+            img = cv2.line(img, start_pt, end_pt, (0, 0, 0), thickness)
+
+        elif i == len(contours)-1:
+            # left vertivcal line ( ex: | column1 | column2 | column3 | ... |)
+            # beginning of textbox
+            start_x_coord = last_textbox[0]
+            start_y_coord = last_textbox[1]
+            start_pt = (start_x_coord, start_y_coord)
+            # bottom of page
+            end_x_coord = last_textbox[0]
+            end_y_coord = first_textbox[1] + max_assign_tup[3]
+            end_pt = (end_x_coord, end_y_coord)
+            # add vertical line to image
             thickness = 3
             img = cv2.line(img, start_pt, end_pt, (0, 0, 0), thickness)
 
+            # top horizontal("ceiling" line)
+            start_x_coord = last_textbox[0]
+            start_y_coord = last_textbox[1]
+            start_pt = (start_x_coord, start_y_coord)
+            end_x_coord = first_textbox[0] + (max_assign_tup[0] + max_assign_tup[2])
+            end_y_coord = start_y_coord
+            end_pt = (end_x_coord, end_y_coord)
+            # add bottom horizontal line to image
+            img = cv2.line(img, start_pt, end_pt, (0, 0, 0), thickness)
 
-        # draw lines in our image to create a table format
-        # start point for our line
-        start_x_coord = x
-        start_y_coord = y
-        start_pt = (start_x_coord, start_y_coord)
-        # end point for our line
-        end_x_coord = last_textbox[0] + last_textbox[2]
-        end_y_coord = start_y_coord
-        end_pt = (end_x_coord, end_y_coord)
+            # # vertivcal line
+            # start_x_coord = first_textbox[0]
+            # start_y_coord = first_textbox[1]
+            # start_pt = (start_x_coord, start_y_coord)
+            # end_x_coord = start_x_coord
+            # end_y_coord = first_textbox[1] + first_textbox[3]
+            # end_pt = (end_x_coord, end_y_coord)
+            # # add vertical line to image
+            # img = cv2.line(img, start_pt, end_pt, (0, 0, 0), thickness)
+            #
+            # # bottom horizontal("floor" line)
+            # start_x_coord = last_textbox[0] + last_textbox[2]
+            # start_y_coord = last_textbox[1] + last_textbox[3]
+            # start_pt = (start_x_coord, start_y_coord)
+            # end_x_coord = first_textbox[0]
+            # end_y_coord = start_y_coord
+            # end_pt = (end_x_coord, end_y_coord)
+            # img = cv2.line(img, start_pt, end_pt, (0, 0, 0), thickness)
 
-        thickness = 3
-        img = cv2.line(img, start_pt, end_pt, (0, 0, 0), thickness)
+        else:
+            # draw lines in our image to create a table format
+            # start point for our line
+            start_x_coord = x
+            start_y_coord = y
+            start_pt = (start_x_coord, start_y_coord)
+            # end point for our line
+            end_x_coord = first_textbox[0] + (max_assign_tup[0] + max_assign_tup[2])
+            end_y_coord = start_y_coord
+            end_pt = (end_x_coord, end_y_coord)
+
+            img = cv2.line(img, start_pt, end_pt, (0, 0, 0), thickness)
 
     return img
+
+
+
 
 def getText(contour,mask1,img):
     # get path to file that can read text in images
     pytesseract.pytesseract.tesseract_cmd = r'/usr/local/bin/tesseract'
     # get dimension for the rectangular box around our contour (contour: date or assigngment)
     x, y, w, h = cv2.boundingRect(contour)
+
     # get the text inside our rectangular box
     result = img[y:y+h,x:x+w]
     # convert image to string
@@ -217,9 +219,27 @@ def getText(contour,mask1,img):
     # remove \n from our string
     test = test.replace("\n", "")
     # test: print text in our image
-    #print(test)
+    #
+    # print("x: " + str(x))
+    # print("y: " + str(y))
+    # print(test)
+
     # return text in the form of string
     return result
+
+
+
+def createEventsICS(assignments_list, dates_list):
+    print(calendar)
+    # c = calendar
+    # e = events
+    # e.name = str(assignments_list[0])
+    # e.begin = str(dates_list[0])
+    # c.events.add(e)
+    # c.events
+    # # [<Event 'My cool event' begin:2014-01-01 00:00:00 end:2014-01-01 00:00:01>]
+    # with open('my.ics', 'w') as my_file:
+    #     my_file.writelines(c)
 
 
 def main():
@@ -229,7 +249,7 @@ def main():
     # get path to file that can read text in images
     pytesseract.pytesseract.tesseract_cmd = r'/usr/local/bin/tesseract'
     # get image
-    img = cv2.imread('Schedule.png')
+    img = cv2.imread('CS153_Sched.png')
     # create an array of all zeros aka all black image
     mask1 = np.zeros(img.shape, np.uint8)
     # convert image to grayscale
@@ -253,12 +273,11 @@ def main():
         else:
             dates_list.append(result)
 
-    img = imgToTable(contours,img)
-    row_col = countRowsAndColumns(contours,img)
+    row_col = countRowsAndColumns(contours, img)
+    img = imgToTable(contours,img, row_col)
 
-
-
-    #createEvent(img, assignments_list, dates_list)
+    createEventsICS(assignments_list, dates_list)
+    #createEvent(assignments_list, dates_list)
 
     #test: show image of the desired result
     cv2.imshow('Box Image', img)
