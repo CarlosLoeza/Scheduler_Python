@@ -6,6 +6,12 @@ import calendar
 
 
 
+# countRowsAndColumns() is used to determine how many rows and columns we have in our course schedule (see images)
+# inputs:
+#   contours: list of contours. Each contour represents a date or assignment string
+#   img: image of the course schedule
+# output:
+#   tuple holding the number of rows and columns (rows, columns)
 def countRowsAndColumns(contours, img):
     # keep track of the number of rows and columns
     row_count = 0
@@ -38,7 +44,7 @@ def countRowsAndColumns(contours, img):
         else:
             temp = row[i]
             # if difference is greater than 5, we have another column
-            if abs(held_val-temp) > 10:
+            if abs(held_val-temp) > 10 :
                 col_count+=1
                 held_val = row[i]
                 new_row.append(row[i])
@@ -58,12 +64,17 @@ def countRowsAndColumns(contours, img):
 
     # print("Rows: " + str(row_count))
     # print("Columns: " + str(col_count))
-
-
     return (new_row,new_col)
 
 
 
+# imgToTable(): accepts image and converts it to a table formart. We add lines based on the rows and columns we found using countRowsAndColumns()
+# inputs:
+#   contours: list of contours. Each contour represents a date or assignment string
+#   img: image of the course schedule
+#   row_col: tuple containing the number of rows and columns (rows, columns)
+# output:
+#   img: return the new img with lines applied
 def imgToTable(contours, img, row_col):
     # find longest date and assignment string, allows us to build our table without
     # making a table cell too big or small
@@ -103,6 +114,10 @@ def imgToTable(contours, img, row_col):
                 max_date_tup = (x, y, w, h)
                 max_assign_size = x+w
 
+    # print("first x: " + str(first_textbox[0]))
+    # print("first y: " + str(first_textbox[1]))
+    # print("last x: " + str(last_textbox[0]))
+    # print("last y: " + str(last_textbox[1]))
 
     for i in range(0, len(contours)):
         # create a bounding rectangle around our text in image
@@ -126,7 +141,7 @@ def imgToTable(contours, img, row_col):
             img = cv2.line(img, start_pt, end_pt, (0, 0, 0), thickness)
 
             # right vertical line
-            start_x_coord = first_textbox[0] + (max_assign_tup[0]+  max_assign_tup[2])
+            start_x_coord = first_textbox[0] + first_textbox[2]
             start_y_coord = first_textbox[1] + max_assign_tup[3]
             start_pt = (start_x_coord, start_y_coord)
             end_x_coord = start_x_coord
@@ -139,90 +154,82 @@ def imgToTable(contours, img, row_col):
             start_x_coord = last_textbox[0]
             start_y_coord = first_textbox[1] + max_assign_tup[3]
             start_pt = (start_x_coord, start_y_coord)
-            end_x_coord = first_textbox[0] + (max_assign_tup[0]+  max_assign_tup[2])
+            end_x_coord = first_textbox[0] + first_textbox[2]
             end_y_coord = start_y_coord
             end_pt = (end_x_coord, end_y_coord)
             # add bottom horizontal line to image
             img = cv2.line(img, start_pt, end_pt, (0, 0, 0), thickness)
 
+        # top left textbox
         elif i == len(contours)-1:
             # left vertivcal line ( ex: | column1 | column2 | column3 | ... |)
             # beginning of textbox
             start_x_coord = last_textbox[0]
             start_y_coord = last_textbox[1]
             start_pt = (start_x_coord, start_y_coord)
-            # bottom of page
-            end_x_coord = last_textbox[0]
-            end_y_coord = first_textbox[1] + max_assign_tup[3]
+
+            # bottom horizontal("floor" line)
+            start_x_coord = last_textbox[0]
+            start_y_coord = last_textbox[1] + max_assign_tup[3]
+            start_pt = (start_x_coord, start_y_coord)
+            end_x_coord = first_textbox[0] + first_textbox[2]
+            end_y_coord = start_y_coord
             end_pt = (end_x_coord, end_y_coord)
-            # add vertical line to image
-            thickness = 3
+            # add bottom horizontal line to image
             img = cv2.line(img, start_pt, end_pt, (0, 0, 0), thickness)
 
             # top horizontal("ceiling" line)
             start_x_coord = last_textbox[0]
             start_y_coord = last_textbox[1]
             start_pt = (start_x_coord, start_y_coord)
-            end_x_coord = first_textbox[0] + (max_assign_tup[0] + max_assign_tup[2])
+            end_x_coord = first_textbox[0] + first_textbox[2]
             end_y_coord = start_y_coord
             end_pt = (end_x_coord, end_y_coord)
             # add bottom horizontal line to image
             img = cv2.line(img, start_pt, end_pt, (0, 0, 0), thickness)
 
-            # # vertivcal line
-            # start_x_coord = first_textbox[0]
-            # start_y_coord = first_textbox[1]
-            # start_pt = (start_x_coord, start_y_coord)
-            # end_x_coord = start_x_coord
-            # end_y_coord = first_textbox[1] + first_textbox[3]
-            # end_pt = (end_x_coord, end_y_coord)
-            # # add vertical line to image
-            # img = cv2.line(img, start_pt, end_pt, (0, 0, 0), thickness)
-            #
-            # # bottom horizontal("floor" line)
-            # start_x_coord = last_textbox[0] + last_textbox[2]
-            # start_y_coord = last_textbox[1] + last_textbox[3]
-            # start_pt = (start_x_coord, start_y_coord)
-            # end_x_coord = first_textbox[0]
-            # end_y_coord = start_y_coord
-            # end_pt = (end_x_coord, end_y_coord)
-            # img = cv2.line(img, start_pt, end_pt, (0, 0, 0), thickness)
-
         else:
-            # draw lines in our image to create a table format
-            # start point for our line
+            # left vertivcal line ( ex: | column1 | column2 | column3 | ... |)
+            # beginning of textbox
             start_x_coord = x
-            start_y_coord = y
+            start_y_coord = first_textbox[1] + max_assign_tup[3]
             start_pt = (start_x_coord, start_y_coord)
-            # end point for our line
-            end_x_coord = first_textbox[0] + (max_assign_tup[0] + max_assign_tup[2])
+            end_x_coord = x
+            end_y_coord = last_textbox[1]
+            end_pt = (end_x_coord, end_y_coord)
+            # add vertical line to image
+            img = cv2.line(img, start_pt, end_pt, (0, 0, 0), thickness)
+
+            # bottom horizontal("floor" line)
+            start_x_coord = x
+            start_y_coord = y + max_assign_tup[3]
+            start_pt = (start_x_coord, start_y_coord)
+            end_x_coord = first_textbox[0] + first_textbox[2]
             end_y_coord = start_y_coord
             end_pt = (end_x_coord, end_y_coord)
-
+            # add bottom horizontal line to image
             img = cv2.line(img, start_pt, end_pt, (0, 0, 0), thickness)
 
     return img
 
 
-
-
-def getText(contour,mask1,img):
+# getText(): gets the text in the contour and turns it into a string using tesseract
+# inputs:
+#   contours: list of contours. Each contour represents a date or assignment string
+#   img: image of the course schedule
+# output:
+#   result: string of the text found in the contour
+def getText(contour,img):
     # get path to file that can read text in images
     pytesseract.pytesseract.tesseract_cmd = r'/usr/local/bin/tesseract'
     # get dimension for the rectangular box around our contour (contour: date or assigngment)
     x, y, w, h = cv2.boundingRect(contour)
-
     # get the text inside our rectangular box
     result = img[y:y+h,x:x+w]
     # convert image to string
     test = pytesseract.image_to_string(result)
     # remove \n from our string
     test = test.replace("\n", "")
-    # test: print text in our image
-    #
-    # print("x: " + str(x))
-    # print("y: " + str(y))
-    # print(test)
 
     # return text in the form of string
     return result
@@ -240,6 +247,7 @@ def createEventsICS(assignments_list, dates_list):
     # # [<Event 'My cool event' begin:2014-01-01 00:00:00 end:2014-01-01 00:00:01>]
     # with open('my.ics', 'w') as my_file:
     #     my_file.writelines(c)
+
 
 
 def main():
@@ -262,9 +270,10 @@ def main():
     # contours will find dates and assignments in our image
     contours, hierarchy = cv2.findContours(dilate, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 
+
     # cycle through our contours (dates and assignments) to read text in image
     for i in range(0,len(contours)):
-        result = getText(contours[i], mask1, img)
+        result = getText(contours[i], img)
         # temp solution as we test:
         # if even index, result is assignment name
         if(i % 2 == 0 ):
@@ -273,15 +282,13 @@ def main():
         else:
             dates_list.append(result)
 
+    # get tuple containing (rows,columns)
     row_col = countRowsAndColumns(contours, img)
+    # convert image to table format
     img = imgToTable(contours,img, row_col)
-
-    createEventsICS(assignments_list, dates_list)
-    #createEvent(assignments_list, dates_list)
 
     #test: show image of the desired result
     cv2.imshow('Box Image', img)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
-
 main()
