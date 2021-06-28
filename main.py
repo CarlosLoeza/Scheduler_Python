@@ -1,12 +1,9 @@
 import pytesseract
 import cv2
-import numpy as np
 import calendar
 
 
-
-
-# countRowsAndColumns() is used to determine how many rows and columns we have in our course schedule (see images)
+# countRowsAndColumns() is used to determine how many rows and columns we have in the syllabus image (see images)
 # inputs:
 #   contours: list of contours. Each contour represents a date or assignment string
 #   img: image of the course schedule
@@ -34,6 +31,7 @@ def countRowsAndColumns(contours, img):
     col.sort()
     temp =0
     held_val =0
+
     # check how many items in a row (ex: 2 different x values in row means we have 2 columns
     for i in range (0, len(row)):
         if i == 0:
@@ -43,7 +41,7 @@ def countRowsAndColumns(contours, img):
             new_row.append(row[i])
         else:
             temp = row[i]
-            # if difference is greater than 5, we have another column
+            # if difference is greater than 10, we have another column
             if abs(held_val-temp) > 10 :
                 col_count+=1
                 held_val = row[i]
@@ -62,13 +60,10 @@ def countRowsAndColumns(contours, img):
                 held_val = col[i]
                 new_col.append(col[i])
 
-    # print("Rows: " + str(row_count))
-    # print("Columns: " + str(col_count))
     return (new_row,new_col)
 
 
-# start_end_pt(): gets the start points and end points of textbox and creates a tuple holding these values.
-# We use the points to create the table lines in our imgToTable()
+# start_end_pt(): gets the start and end points of textbox and creates a tuple holding these values. We use the points to create the table lines in our imgToTable()
 # inputs:
 #   start_x & start_y: represents the start point of our text box
 #   end_x & end_y: represent the end point of our text box
@@ -84,6 +79,7 @@ def start_end_pt(start_x, start_y, end_x, end_y):
     end_pt = (end_x_coord, end_y_coord)
     # create tuple
     start_end_pts = ((start_pt),(end_pt))
+
     return start_end_pts
 
 
@@ -101,14 +97,10 @@ def imgToTable(contours, img, row_col):
     max_date_size = -1
     col_size = len(row_col[1])
 
-
     # cycle through all of our contours to find longest string in each column
     for i in range(0, len(contours)):
         # get dimension for the rectangular box around our contour (contour: date or assigngment)
         x, y, w, h = cv2.boundingRect(contours[i])
-        # print("x: " + str(x))
-        # print("y: " + str(y))
-        # print()
 
         # save the first and last textbox coordinates so we know where the course schedule starts and ends
         # reads image bottom-up, right-to-left
@@ -130,10 +122,8 @@ def imgToTable(contours, img, row_col):
                 max_date_tup = (x, y, w, h)
                 max_assign_size = x+w
 
-    # print("first x: " + str(first_textbox[0]))
-    # print("first y: " + str(first_textbox[1]))
-    # print("last x: " + str(last_textbox[0]))
-    # print("last y: " + str(last_textbox[1]))
+    # line thickness, used in for-loop to draw lines
+    thickness = 3
 
     for i in range(0, len(contours)):
         # create a bounding rectangle around our text in image
@@ -149,7 +139,6 @@ def imgToTable(contours, img, row_col):
             # start_end_pt(start_x_coordinate, start_y_coordinate, end_x_coordinate, end_y_coordinate)
             points = start_end_pt(first_textbox[0], (first_textbox[1]+max_assign_tup[3]), first_textbox[0], last_textbox[1])
             # add vertical line to image
-            thickness = 3
             img = cv2.line(img, points[0], points[1], (0, 0, 0), thickness)
 
             # right vertical line
@@ -266,15 +255,6 @@ def main():
     row_col = countRowsAndColumns(contours, img)
     # convert image to table format
     img = imgToTable(contours,img, row_col)
-
-
-    for x in assignments_list:
-        print(x)
-
-    print()
-    for y in dates_list:
-        print(y)
-
 
     #test: show image of the desired result
     cv2.imshow('Box Image', img)
