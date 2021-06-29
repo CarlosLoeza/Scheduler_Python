@@ -4,11 +4,13 @@ import calendar
 import numpy as np
 
 
-# testing process
+
 # contoursAroundBoxes is meant to detect if the course schedule is already in a table format (see image 'CourseSched.png')
 # If it is, then we don't need to apply imgToData()
 # input:
 #   img: course schedule image provided by user
+# output:
+#   stats[2:] is the contours around the table cells
 def contoursAroundBoxes(img):
     gray_scale = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     th1, img_bin = cv2.threshold(gray_scale, 150, 225, cv2.THRESH_BINARY)
@@ -16,13 +18,14 @@ def contoursAroundBoxes(img):
 
     ### selecting min size as 15 pixels
     line_min_width = 15
+    # get horizontal lines
     kernal_h = np.ones((1, line_min_width), np.uint8)
+    # get vertical lines
     kernal_v = np.ones((line_min_width, 1), np.uint8)
 
+    # combine both lines
     img_bin_h = cv2.morphologyEx(img_bin, cv2.MORPH_OPEN, kernal_h)
-
     img_bin_v = cv2.morphologyEx(img_bin, cv2.MORPH_OPEN, kernal_v)
-
     img_bin_final = img_bin_h | img_bin_v
 
     _, labels, stats, _ = cv2.connectedComponentsWithStats(~img_bin_final, connectivity=8, ltype=cv2.CV_32S)
@@ -30,8 +33,6 @@ def contoursAroundBoxes(img):
     for x, y, w, h, area in stats[2:]:
         cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
-    print(len(stats[2:]))
-    print(stats[2:2])
     return stats[2:]
 
 
@@ -105,6 +106,7 @@ def countRowsAndColumns(contours, img, table_found):
     print("columns: " + str(new_col))
 
     return (new_row,new_col)
+
 
 
 # start_end_pt(): gets the start and end points of textbox and creates a tuple holding these values. We use the points to create the table lines in our imgToTable()
@@ -253,23 +255,11 @@ def getText(contour,img, table_found):
     img_string = pytesseract.image_to_string(result)
     # remove \n from our string
     img_string = img_string.replace("\n", "")
+    # remove leading and trailing spaces
+    img_string = img_string.strip()
 
     # return text in the form of string
     return img_string
-
-
-
-def createEventsICS(assignments_list, dates_list):
-    print(calendar)
-    c = calendar
-    e = events
-    e.name = str(assignments_list[0])
-    e.begin = str(dates_list[0])
-    c.events.add(e)
-    c.events
-    # [<Event 'My cool event' begin:2014-01-01 00:00:00 end:2014-01-01 00:00:01>]
-    with open('my.ics', 'w') as my_file:
-        my_file.writelines(c)
 
 
 
@@ -279,11 +269,11 @@ def main():
     assignments_list = []
     # lets us know if course schedule is in table format already (see image 'CourseSched.png')
     # brute force for now
-    table_found = False
+    table_found = True
     # get path to file that can read text in images
     pytesseract.pytesseract.tesseract_cmd = r'/usr/local/bin/tesseract'
     # get image
-    img = cv2.imread('Schedule.png')
+    img = cv2.imread('CourseSched.png')
     # convert image to grayscale
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     blur = cv2.GaussianBlur(gray, (7,7), 0)
@@ -298,11 +288,21 @@ def main():
     if table_found:
         # get the contours in our image. Contours represent rectangular table cells in our image (see image 'CourseSched.png')
         table_contours = contoursAroundBoxes(img)
+        # get tuple containing (rows,columns)
+        row_col = countRowsAndColumns(table_contours, img, table_found)
         # get the text in each rectangle
         for i in range(0, len(table_contours)):
             result = getText(table_contours[i], img, table_found)
-            print(result)
-            print()
+
+            # if even index, result is assignment name
+            if (i % len(row_col[0]) == 1):
+                assignments_list.append(result)
+            # if odd, result is date
+            elif (i % len(row_col[0]) == 0):
+                dates_list.append(result)
+            #print(result)
+            #print()
+
     # else course schedule image is not in table formate
     else:
         # cycle through our contours (dates and assignments) to read text in image
@@ -317,17 +317,22 @@ def main():
                 dates_list.append(result)
             print(result)
             print()
+        # get tuple containing (rows,columns)
+        row_col = countRowsAndColumns(contours, img, table_found)
+        # convert image to table format
+        img = imgToTable(contours, img, row_col)
 
-    # table_contours = contoursAroundBoxes(img)
+    # test: prrint out dates
+    for c in dates_list:
+        print(c)
+        print()
 
+    # test: print assignment names
+    for x in assignments_list:
+        print(x)
+        print()
 
-
-    # get tuple containing (rows,columns)
-    #row_col = countRowsAndColumns(table_contours, img, table_found)
-    # convert image to table format
-    #img = imgToTable(contours,img, row_col)
-
-    #cv2.imshow('Box Image', img1)
+    cv2.imshow('Box Image', img)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 main()
