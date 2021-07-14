@@ -2,6 +2,41 @@ import pytesseract
 import cv2
 import calendar
 import numpy as np
+from ics import Calendar, Event
+import datefinder
+
+
+
+
+
+
+def createCalendarEvents(dates_list, assignments_list):
+    c = Calendar()
+    e = Event()
+    print(len(dates_list))
+    for i in range (1, len(dates_list)):
+
+        matches = list(datefinder.find_dates(dates_list[i]))
+        if len(matches) > 0:
+
+            # date returned will be a datetime.datetime object. here we are only using the first match.
+            date = matches[0]
+            print(date)
+            e.name = assignments_list[i]
+            print(e.name)
+
+            e.begin = date
+            print(e.begin)
+            c.events.add(e)
+            c.events
+            # add events to our ics file based on the date and assignment name we found on the course schedule
+            open('my.ics', 'a+').writelines(c)
+                # my_file.writelines(c)
+            # and it's done !
+
+        else:
+            print('No dates found')
+
 
 
 
@@ -170,7 +205,7 @@ def imgToTable(contours, img, row_col):
                 max_assign_size = x+w
 
     # line thickness, used in for-loop to draw lines
-    thickness = 3
+    thickness = 1
 
     for i in range(0, len(contours)):
         # create a bounding rectangle around our text in image
@@ -234,7 +269,7 @@ def imgToTable(contours, img, row_col):
 
 # getText(): gets the text in the contour and turns it into a string using tesseract
 # inputs:
-#   contours: list of contours. Each contour represents a date or assignment string
+#   contours: list of contours. A contour represents a date or assignment
 #   img: image of the course schedule
 # output:
 #   result: string of the text found in the contour
@@ -269,11 +304,11 @@ def main():
     assignments_list = []
     # lets us know if course schedule is in table format already (see image 'CourseSched.png')
     # brute force for now
-    table_found = True
-    # get path to file that can read text in images
-    pytesseract.pytesseract.tesseract_cmd = r'/usr/local/bin/tesseract'
+    table_found = False
+
     # get image
-    img = cv2.imread('CourseSched.png')
+    img = cv2.imread('Images/Schedule.png')
+
     # convert image to grayscale
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     blur = cv2.GaussianBlur(gray, (7,7), 0)
@@ -293,7 +328,7 @@ def main():
         # get the text in each rectangle
         for i in range(0, len(table_contours)):
             result = getText(table_contours[i], img, table_found)
-
+            # fix: brute force in the if-elif
             # if even index, result is assignment name
             if (i % len(row_col[0]) == 1):
                 assignments_list.append(result)
@@ -303,36 +338,43 @@ def main():
             #print(result)
             #print()
 
-    # else course schedule image is not in table formate
+    # else course schedule image is not in table format
     else:
+        # get tuple containing (rows,columns)
+        row_col = countRowsAndColumns(contours, img, table_found)
         # cycle through our contours (dates and assignments) to read text in image
         for i in range(0,len(contours)):
             result = getText(contours[i], img, table_found)
             # temp solution as we test:
             # if even index, result is assignment name
             if(i % 2 == 0 ):
-                assignments_list.append(result)
+                assignments_list.append(str(result))
             # if odd, result is date
             else:
-                dates_list.append(result)
+                dates_list.append(str(result))
             print(result)
             print()
-        # get tuple containing (rows,columns)
-        row_col = countRowsAndColumns(contours, img, table_found)
         # convert image to table format
         img = imgToTable(contours, img, row_col)
 
-    # test: prrint out dates
-    for c in dates_list:
-        print(c)
-        print()
 
-    # test: print assignment names
-    for x in assignments_list:
-        print(x)
-        print()
+    print(len(dates_list))
+
+    # # test: print out dates
+    # for c in dates_list:
+    #     print(c)
+    #     print()
+    #
+    # # test: print assignment names
+    # for x in assignments_list:
+    #     print(x)
+    #     print()
+
+    createCalendarEvents(dates_list, assignments_list)
+
 
     cv2.imshow('Box Image', img)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
+
 main()
