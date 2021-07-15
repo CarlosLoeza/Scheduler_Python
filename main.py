@@ -4,9 +4,34 @@ import calendar
 import numpy as np
 from ics import Calendar, Event
 import datefinder
+import os
+import datetime
 
 
 
+def createEvent(date, assignment):
+    # check if calendar file(ics file) exists,
+    # if exist, append event
+    if 'my.ics' in os.listdir('/Users/carlos/PycharmProjects/OCR'):
+        # e_date = []
+        # e_date = str(date).split('-')
+        # print(e_date[1])
+        # print('----')
+    #     start = datetime(2021, )
+    #     BEGIN: VEVENT
+    #     DTSTART: 20210702
+    #     T080000Z
+    #     DTEND: 20210702
+    #     T110000Z
+    #     SUMMARY: Example 1
+    #     END: VEVENT
+
+        c = 'BEGIN:VEVENT\nEnd:VEVENT'
+        open('my.ics', 'a+').writelines(c)
+    # else, create ics
+    else:
+        c = 'BEGIN:VCALENDAR\nVERSION:2.0\nCALSCALE:GREGORIAN\nMETHOD:PUBLISH\n'
+        open('my.ics', 'a+').writelines(c)
 
 
 
@@ -22,11 +47,24 @@ def createCalendarEvents(dates_list, assignments_list):
             # date returned will be a datetime.datetime object. here we are only using the first match.
             date = matches[0]
             print(date)
+            # test to get day of month
+            e_date = []
+            e_date = str(date).split('-')
+            # ex: 2014-01-12 00:00:00
+            # e_date[1]: 01
+            # e_date[2]: 12
+            # month
+            month = e_date[1]
+            print("month: " + str(month))
+            # day
+            day = e_date[2].split(' ')
+            day = day[0]
+            print("day: " + str(day))
+            print('----')
+            ###################################
             e.name = assignments_list[i]
             print(e.name)
-
-            e.begin = date
-            print(e.begin)
+            e.begin = datetime
             c.events.add(e)
             c.events
             # add events to our ics file based on the date and assignment name we found on the course schedule
@@ -305,6 +343,8 @@ def main():
     # lets us know if course schedule is in table format already (see image 'CourseSched.png')
     # brute force for now
     table_found = False
+
+    createEvent(1, 2)
 
     # get image
     img = cv2.imread('Images/Schedule.png')
